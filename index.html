@@ -29,10 +29,10 @@
       background: var(--bg);
       color: var(--fg);
       margin: 0;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      min-height: 100vh;
     }
 
     .container {
@@ -76,7 +76,7 @@
     }
 
     button {
-      margin-top: 30px;
+      margin-top: 20px;
       width: 100%;
       padding: 14px;
       border-radius: 10px;
@@ -84,6 +84,20 @@
       background: var(--accent);
       color: #fff;
       cursor: pointer;
+      font-size: 15px;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg);
+    }
+
+    .status {
+      margin-top: 15px;
+      font-size: 13px;
+      text-align: center;
+      opacity: .75;
     }
 
     #logo-dark { display: none; }
@@ -104,6 +118,14 @@
     <h1>Palabra del día</h1>
     <p>Subir entrada completa</p>
 
+    <!-- CONNECT -->
+    <button id="connectBtn" class="secondary">
+      Conectar Google Drive
+    </button>
+
+    <div id="connectionStatus" class="status"></div>
+
+    <!-- FORM -->
     <form id="uploadForm">
       <label>Fecha</label>
       <input type="date" name="date" required>
@@ -126,38 +148,65 @@
       <button type="submit">Enviar</button>
     </form>
 
-    <p style="margin-top:20px;font-size:12px;opacity:.7">
+    <p class="status">
       Debes haber conectado Google Drive antes de subir.
     </p>
   </div>
 
 <script>
-  const WORKER_URL = "http://localhost:8787/upload";
+  const WORKER_BASE = "http://localhost:8787";
+  const SESSION_KEY = "palabra_session";
 
+  /* === OAuth redirect handling === */
+  const params = new URLSearchParams(window.location.search);
+  const sessionFromUrl = params.get("session");
+
+  if (sessionFromUrl) {
+    localStorage.setItem(SESSION_KEY, sessionFromUrl);
+    history.replaceState({}, "", location.pathname);
+  }
+
+  const statusEl = document.getElementById("connectionStatus");
+  const session = localStorage.getItem(SESSION_KEY);
+
+  statusEl.textContent = session
+    ? "Google Drive conectado ✔"
+    : "Google Drive no conectado";
+
+  /* === Connect button === */
+  document.getElementById("connectBtn").onclick = () => {
+    window.location.href = WORKER_BASE + "/oauth/start";
+  };
+
+  /* === Upload === */
   document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const token = localStorage.getItem("gdrive_token");
-    if (!token) {
+    const sessionId = localStorage.getItem(SESSION_KEY);
+    if (!sessionId) {
       alert("Primero conecta Google Drive.");
       return;
     }
 
     const formData = new FormData(e.target);
 
-    const res = await fetch(WORKER_URL, {
+    const res = await fetch(WORKER_BASE + "/upload", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token
+        "X-Session": sessionId
       },
       body: formData
     });
 
     const text = await res.text();
-    alert(text);
-  });
 
+    if (res.ok) {
+      alert("Subido correctamente ✔");
+      e.target.reset();
+    } else {
+      alert("Error: " + text);
+    }
+  });
 </script>
 </body>
 </html>
-
