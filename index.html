@@ -29,7 +29,6 @@
       background: var(--bg);
       color: var(--fg);
       margin: 0;
-      padding: 0;
       display: flex;
       justify-content: center;
       align-items: flex-start;
@@ -44,7 +43,6 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
     }
 
     img {
@@ -53,16 +51,8 @@
       margin: 0 auto 20px;
     }
 
-    h1 {
+    h1, p {
       text-align: center;
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-
-    p {
-      text-align: center;
-      margin-bottom: 30px;
-      opacity: 0.85;
     }
 
     label {
@@ -83,30 +73,17 @@
 
     textarea {
       min-height: 120px;
-      resize: vertical;
     }
 
     button {
       margin-top: 30px;
       width: 100%;
       padding: 14px;
-      font-size: 15px;
-      border: none;
       border-radius: 10px;
+      border: none;
       background: var(--accent);
       color: #fff;
       cursor: pointer;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    .footer {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 11px;
-      opacity: 0.6;
     }
 
     #logo-dark { display: none; }
@@ -127,11 +104,7 @@
     <h1>Palabra del día</h1>
     <p>Subir entrada completa</p>
 
-    <form
-      method="POST"
-      action="https://palddia-form-worker.luis-21e.workers.dev"
-      enctype="multipart/form-data"
-    >
+    <form id="uploadForm">
       <label>Fecha</label>
       <input type="date" name="date" required>
 
@@ -144,7 +117,7 @@
       <label>Texto</label>
       <textarea name="text" required></textarea>
 
-      <label>Imagen (JPG / PNG)</label>
+      <label>Imagen</label>
       <input type="file" name="image" accept="image/*" required>
 
       <label>PDF</label>
@@ -153,9 +126,38 @@
       <button type="submit">Enviar</button>
     </form>
 
-    <div class="footer">
-      Hecho por Accessibles®
-    </div>
+    <p style="margin-top:20px;font-size:12px;opacity:.7">
+      Debes haber conectado Google Drive antes de subir.
+    </p>
   </div>
+
+<script>
+  const WORKER_URL = "http://localhost:8787/upload";
+
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem("gdrive_token");
+    if (!token) {
+      alert("Primero conecta Google Drive.");
+      return;
+    }
+
+    const formData = new FormData(e.target);
+
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token
+      },
+      body: formData
+    });
+
+    const text = await res.text();
+    alert(text);
+  });
+
+</script>
 </body>
 </html>
+
