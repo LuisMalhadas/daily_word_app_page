@@ -133,9 +133,6 @@
       <label>Palabra</label>
       <input type="text" name="word" required>
 
-      <label>Título</label>
-      <input type="text" name="title" required>
-
       <label>Texto</label>
       <textarea name="text" required></textarea>
 
@@ -154,7 +151,7 @@
   </div>
 
 <script>
-  const WORKER_BASE = "http://localhost:8787";
+  const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";//http://localhost:8787";
   const SESSION_KEY = "palabra_session";
 
   /* === OAuth redirect handling === */
