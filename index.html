@@ -105,6 +105,36 @@
       #logo-light { display: none; }
       #logo-dark { display: block; }
     }
+
+    /* Spinner overlay */
+    #spinnerOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.25);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* Spinner circle */
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--accent);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    /* Spin animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
@@ -148,10 +178,14 @@
     <p class="status">
       Debes haber conectado Google Drive antes de subir.
     </p>
+
+    <div id="spinnerOverlay" style="display:none;">
+      <div class="spinner"></div>
+    </div>
   </div>
 
 <script>
-  const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";//http://localhost:8787";
+  const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";
   const SESSION_KEY = "palabra_session";
 
   /* === OAuth redirect handling === */
@@ -175,33 +209,48 @@
     window.location.href = WORKER_BASE + "/oauth/start";
   };
 
+  const spinner = document.getElementById("spinnerOverlay");
+
   /* === Upload === */
   document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+
     const sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) {
       alert("Primero conecta Google Drive.");
+      submitBtn.disabled = false;
       return;
     }
 
     const formData = new FormData(e.target);
 
-    const res = await fetch(WORKER_BASE + "/upload", {
-      method: "POST",
-      headers: {
-        "X-Session": sessionId
-      },
-      body: formData
-    });
+    spinner.style.display = "flex";
 
-    const text = await res.text();
+    try {
+      const res = await fetch(WORKER_BASE + "/upload", {
+        method: "POST",
+        headers: {
+          "X-Session": sessionId
+        },
+        body: formData
+      });
 
-    if (res.ok) {
-      alert("Subido correctamente ✔");
-      e.target.reset();
-    } else {
-      alert("Error: " + text);
+      const text = await res.text();
+
+      if (res.ok) {
+        alert("Subido correctamente ✔");
+        e.target.reset();
+      } else {
+        alert("Error: " + text);
+      }
+    } catch (err) {
+      alert("Error en la subida: " + err.message);
+    } finally {
+      spinner.style.display = "none";
+      submitBtn.disabled = false;
     }
   });
 </script>
