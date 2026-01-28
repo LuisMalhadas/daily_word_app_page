@@ -153,6 +153,10 @@
       Conectar Google Drive
     </button>
 
+    <button id="logoutBtn" class="secondary" style="display:none;">
+      Cerrar sesión Google Drive
+    </button>
+
     <div id="connectionStatus" class="status"></div>
 
     <!-- FORM -->
@@ -184,75 +188,93 @@
     </div>
   </div>
 
-<script>
-  const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";
-  const SESSION_KEY = "palabra_session";
+  <script>
+    const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";
+    const SESSION_KEY = "palabra_session";
 
-  /* === OAuth redirect handling === */
-  const params = new URLSearchParams(window.location.search);
-  const sessionFromUrl = params.get("session");
+    /* === OAuth redirect handling === */
+    const params = new URLSearchParams(window.location.search);
+    const sessionFromUrl = params.get("session");
 
-  if (sessionFromUrl) {
-    localStorage.setItem(SESSION_KEY, sessionFromUrl);
-    history.replaceState({}, "", location.pathname);
-  }
-
-  const statusEl = document.getElementById("connectionStatus");
-  const session = localStorage.getItem(SESSION_KEY);
-
-  statusEl.textContent = session
-    ? "Google Drive conectado ✔"
-    : "Google Drive no conectado";
-
-  /* === Connect button === */
-  document.getElementById("connectBtn").onclick = () => {
-    window.location.href = WORKER_BASE + "/oauth/start";
-  };
-
-  const spinner = document.getElementById("spinnerOverlay");
-
-  /* === Upload === */
-  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-
-    const sessionId = localStorage.getItem(SESSION_KEY);
-    if (!sessionId) {
-      alert("Primero conecta Google Drive.");
-      submitBtn.disabled = false;
-      return;
+    if (sessionFromUrl) {
+      localStorage.setItem(SESSION_KEY, sessionFromUrl);
+      history.replaceState({}, "", location.pathname);
     }
 
-    const formData = new FormData(e.target);
+    const statusEl = document.getElementById("connectionStatus");
+    const session = localStorage.getItem(SESSION_KEY);
 
-    spinner.style.display = "flex";
+    statusEl.textContent = session
+      ? "Google Drive conectado ✔"
+      : "Google Drive no conectado";
 
-    try {
-      const res = await fetch(WORKER_BASE + "/upload", {
+    /* === Connect button === */
+    document.getElementById("connectBtn").onclick = () => {
+      window.location.href = WORKER_BASE + "/oauth/start";
+    };
+
+    const spinner = document.getElementById("spinnerOverlay");
+
+    /* === Upload === */
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      const sessionId = localStorage.getItem(SESSION_KEY);
+      if (!sessionId) {
+        alert("Primero conecta Google Drive.");
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const formData = new FormData(e.target);
+
+      spinner.style.display = "flex";
+
+      try {
+        const res = await fetch(WORKER_BASE + "/upload", {
+          method: "POST",
+          headers: {
+            "X-Session": sessionId
+          },
+          body: formData
+        });
+
+        const text = await res.text();
+
+        if (res.ok) {
+          alert("Subido correctamente ✔");
+          e.target.reset();
+        } else {
+          alert("Error: " + text);
+        }
+      } catch (err) {
+        alert("Error en la subida: " + err.message);
+      } finally {
+        spinner.style.display = "none";
+        submitBtn.disabled = false;
+      }
+    });
+
+    logoutBtn.onclick = async () => {
+      const session = localStorage.getItem(SESSION_KEY);
+      if (!session) return;
+
+      if (!confirm("¿Cerrar sesión de Google Drive?")) return;
+
+      await fetch(WORKER_BASE + "/oauth/logout", {
         method: "POST",
         headers: {
-          "X-Session": sessionId
-        },
-        body: formData
+          "X-Session": session
+        }
       });
 
-      const text = await res.text();
-
-      if (res.ok) {
-        alert("Subido correctamente ✔");
-        e.target.reset();
-      } else {
-        alert("Error: " + text);
-      }
-    } catch (err) {
-      alert("Error en la subida: " + err.message);
-    } finally {
-      spinner.style.display = "none";
-      submitBtn.disabled = false;
-    }
-  });
-</script>
+      localStorage.removeItem(SESSION_KEY);
+      updateConnectionUI();
+      alert("Sesión cerrada correctamente");
+    };
+  </script>
 </body>
 </html>
