@@ -173,6 +173,9 @@
       <label>Imagen</label>
       <input type="file" name="image" accept="image/*" required>
 
+      <label>Descripción de la imagen</label>
+      <input type="text" name="imageDescription" required>
+
       <label>PDF</label>
       <input type="file" name="pdf" accept="application/pdf" required>
 
@@ -202,6 +205,8 @@
     }
 
     const statusEl = document.getElementById("connectionStatus");
+    const connectBtn = document.getElementById("connectBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
     const session = localStorage.getItem(SESSION_KEY);
 
     statusEl.textContent = session
@@ -211,6 +216,16 @@
     /* === Connect button === */
     document.getElementById("connectBtn").onclick = () => {
       window.location.href = WORKER_BASE + "/oauth/start";
+
+      if (session) {
+        statusEl.textContent = "Google Drive conectado ✔";
+        connectBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+      } else {
+        statusEl.textContent = "Google Drive no conectado";
+        connectBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+      }
     };
 
     const spinner = document.getElementById("spinnerOverlay");
@@ -274,6 +289,16 @@
       localStorage.removeItem(SESSION_KEY);
       updateConnectionUI();
       alert("Sesión cerrada correctamente");
+
+      if (!session) {
+        statusEl.textContent = "Google Drive no conectado";
+        connectBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+      } else {
+        statusEl.textContent = "Google Drive conectado ✔";
+        connectBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+      }
     };
   </script>
 </body>
