@@ -140,7 +140,7 @@
 
 <body>
   <div class="container">
-    <a href="https://accessibles.es" target="_blank" rel="noopener">
+    <a href="https://accessibles.es " target="_blank" rel="noopener">
       <img id="logo-light" src="assets/logo.png" alt="Accessibles logo">
       <img id="logo-dark" src="assets/logow.png" alt="Accessibles logo dark">
     </a>
@@ -195,28 +195,15 @@
     const WORKER_BASE = "https://palddia-form-worker.luis-21e.workers.dev";
     const SESSION_KEY = "palabra_session";
 
-    /* === OAuth redirect handling === */
-    const params = new URLSearchParams(window.location.search);
-    const sessionFromUrl = params.get("session");
-
-    if (sessionFromUrl) {
-      localStorage.setItem(SESSION_KEY, sessionFromUrl);
-      history.replaceState({}, "", location.pathname);
-    }
-
     const statusEl = document.getElementById("connectionStatus");
     const connectBtn = document.getElementById("connectBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const session = localStorage.getItem(SESSION_KEY);
+    const spinner = document.getElementById("spinnerOverlay");
 
-    statusEl.textContent = session
-      ? "Google Drive conectado ✔"
-      : "Google Drive no conectado";
-
-    /* === Connect button === */
-    document.getElementById("connectBtn").onclick = () => {
-      window.location.href = WORKER_BASE + "/oauth/start";
-
+    /* === UI Update Function === */
+    function updateUI() {
+      const session = localStorage.getItem(SESSION_KEY);
+      
       if (session) {
         statusEl.textContent = "Google Drive conectado ✔";
         connectBtn.style.display = "none";
@@ -226,9 +213,51 @@
         connectBtn.style.display = "block";
         logoutBtn.style.display = "none";
       }
+    }
+
+    /* === OAuth redirect handling === */
+    const params = new URLSearchParams(window.location.search);
+    const sessionFromUrl = params.get("session");
+
+    if (sessionFromUrl) {
+      localStorage.setItem(SESSION_KEY, sessionFromUrl);
+      history.replaceState({}, "", location.pathname);
+    }
+
+    /* === Initial UI state === */
+    updateUI();
+
+    /* === Connect button === */
+    connectBtn.onclick = () => {
+      window.location.href = WORKER_BASE + "/oauth/start";
     };
 
-    const spinner = document.getElementById("spinnerOverlay");
+    /* === Logout button === */
+    logoutBtn.onclick = async () => {
+      const session = localStorage.getItem(SESSION_KEY);
+      if (!session) return;
+
+      if (!confirm("¿Cerrar sesión de Google Drive?")) return;
+
+      spinner.style.display = "flex";
+
+      try {
+        await fetch(WORKER_BASE + "/oauth/logout", {
+          method: "POST",
+          headers: {
+            "X-Session": session
+          }
+        });
+        
+        localStorage.removeItem(SESSION_KEY);
+        updateUI(); // This now properly toggles the buttons
+        alert("Sesión cerrada correctamente");
+      } catch (err) {
+        alert("Error al cerrar sesión: " + err.message);
+      } finally {
+        spinner.style.display = "none";
+      }
+    };
 
     /* === Upload === */
     document.getElementById("uploadForm").addEventListener("submit", async (e) => {
@@ -272,34 +301,6 @@
         submitBtn.disabled = false;
       }
     });
-
-    logoutBtn.onclick = async () => {
-      const session = localStorage.getItem(SESSION_KEY);
-      if (!session) return;
-
-      if (!confirm("¿Cerrar sesión de Google Drive?")) return;
-
-      await fetch(WORKER_BASE + "/oauth/logout", {
-        method: "POST",
-        headers: {
-          "X-Session": session
-        }
-      });
-
-      localStorage.removeItem(SESSION_KEY);
-      updateConnectionUI();
-      alert("Sesión cerrada correctamente");
-
-      if (!session) {
-        statusEl.textContent = "Google Drive no conectado";
-        connectBtn.style.display = "block";
-        logoutBtn.style.display = "none";
-      } else {
-        statusEl.textContent = "Google Drive conectado ✔";
-        connectBtn.style.display = "none";
-        logoutBtn.style.display = "block";
-      }
-    };
   </script>
 </body>
 </html>
